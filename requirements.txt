@@ -1,0 +1,6 @@
+# py -m venv venv
+# .\venv\Scripts\activate
+# pip install -r .\requirements.txt
+
+opencv-python==4.5.5.64
+tensorflow==2.9.0
