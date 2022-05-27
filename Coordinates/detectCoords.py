@@ -28,6 +28,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from time import time
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -66,7 +67,7 @@ def run(
         augment=False,  # augmented inference
         visualize=False,  # visualize features
         update=False,  # update all models
-        project=ROOT / 'runs/detect',  # save results to project/name
+        project=ROOT / 'runs/detectCoords',  # save results to project/name
         name='exp',  # save results to project/name
         exist_ok=False,  # existing project/name ok, do not increment
         line_thickness=3,  # bounding box thickness (pixels)
@@ -74,6 +75,9 @@ def run(
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
         dnn=False,  # use OpenCV DNN for ONNX inference
+
+        #---------------Sets goalid via parser---------------#
+        goal = 1, 
 ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -103,6 +107,9 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt)
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
+
+    #---------------Starts timer when video is loaded---------------#
+    start_time = time()
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
@@ -149,13 +156,23 @@ def run(
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
+                
+
+
+                #---------------Added Coords and goals---------------#
                 for *xyxy, conf, cls in reversed(det):
                     c1,c2 = (int(xyxy[0]),int(xyxy[1])),(int(xyxy[2]),int(xyxy[3]))
                     xCoord = round((c1[0]+c2[0])/2)
                     yCoord = round((c1[1]+c2[1])/2)
                     center_point = xCoord,yCoord
-                    text_Goal = cv2.putText(im0,f"Goal: {str(checkGoal(xCoord,yCoord))}",(200,100),cv2.FONT_HERSHEY_PLAIN,2,(0,255,255))
-                    text_coord = cv2.putText(im0,str(center_point),center_point,cv2.FONT_HERSHEY_PLAIN,2,(0,255,255))
+                    #time_atm = cv2.putText(im0,f"Time: {str(round(time() - start_time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen
+                    if Goal(xCoord,yCoord,save_dir,(round(time() - start_time)),goal):
+                        text_Goal = cv2.putText(im0,f"Goal {goal}",(1000,450),cv2.FONT_HERSHEY_PLAIN,4,(255, 0, 0),3)
+                    #text_coord = cv2.putText(im0,str(center_point),center_point,cv2.FONT_HERSHEY_PLAIN,2,(0,255,255),2)     #---------------shows coords of ball
+                
+                
+
+
                 # Print results
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
@@ -214,11 +231,29 @@ def run(
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
 
-def checkGoal(x,y):
-    if x in range(468,1450) and y in range(900,1075):
-        return True
+
+#---------------Goal detection---------------#
+def Goal(x,y,save_dir,time,goalId):
+    GoalId = goalId
+    if GoalId == 1:
+        if x in range(468,1450) and y in range(900,1075):
+            with open(f'{save_dir}/goals.txt', 'a') as f:
+                f.write(f'Goal: {time}')
+                f.close()
+            return True
+        else:
+            return False
+    elif GoalId == 2:
+        if x in range(585,1400) and y in range(900,1075):
+            with open(f'{save_dir}/goals.txt', 'a') as f:
+                f.write(f'Goal: {time}')
+                f.close()
+            return True
+        else:
+            return False
     else:
-        return False
+        raise Exception('Goal only accepts 1 and 2 ----- (if bottom half of the goal is cutt of choose 1 else choose 2)')
+
 
 
 def parse_opt():
@@ -249,6 +284,11 @@ def parse_opt():
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
+
+    #Add Goal to arguments
+    parser.add_argument('--goal', type=int, default=1, help='sets goal to detect, choose between 1 and 2')
+
+
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
