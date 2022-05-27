@@ -33,6 +33,8 @@ from time import time
 import torch
 import torch.backends.cudnn as cudnn
 
+from datahandler import datahandler
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -229,6 +231,7 @@ def run(
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
+        datahandler(save_dir, 10)
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
