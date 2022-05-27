@@ -108,8 +108,6 @@ def run(
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
 
-    #---------------Starts timer when video is loaded---------------#
-    start_time = time()
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
@@ -146,6 +144,10 @@ def run(
             else:
                 p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
 
+            #--------------Gets seconds frome frame--------------#
+            time = frame / 30
+
+
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
@@ -165,8 +167,8 @@ def run(
                     xCoord = round((c1[0]+c2[0])/2)
                     yCoord = round((c1[1]+c2[1])/2)
                     center_point = xCoord,yCoord
-                    #time_atm = cv2.putText(im0,f"Time: {str(round(time() - start_time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen
-                    if Goal(xCoord,yCoord,save_dir,(round(time() - start_time)),goal):
+                    #time_atm = cv2.putText(im0,f"Time: {str(round(time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen
+                    if Goal(xCoord,yCoord,save_dir,(round(time)),goal):
                         text_Goal = cv2.putText(im0,f"Goal {goal}",(1000,450),cv2.FONT_HERSHEY_PLAIN,4,(255, 0, 0),3)
                     #text_coord = cv2.putText(im0,str(center_point),center_point,cv2.FONT_HERSHEY_PLAIN,2,(0,255,255),2)     #---------------shows coords of ball
                 
@@ -235,9 +237,12 @@ def run(
 #---------------Create Timestamps---------------#
 
 def getTimeStamp(sec):
-    mm, ss = divmod(sec, 60)
-    hh, mm= divmod(mm, 60)
-    return f"{(str(hh).rjust(2, '0'))}:{(str(mm).rjust(2, '0'))}:{(str(ss).rjust(2, '0'))}"
+    if sec < 1:
+        return "00:00:00"
+    else:
+        mm, ss = divmod((sec), 60)
+        hh, mm= divmod(mm, 60)
+        return f"{(str(hh).rjust(2, '0'))}:{(str(mm).rjust(2, '0'))}:{(str(ss).rjust(2, '0'))}"
 
 
 #---------------Goal detection---------------#
