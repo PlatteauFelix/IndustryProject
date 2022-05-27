@@ -232,13 +232,22 @@ def run(
 
 
 
+#---------------Create Timestamps---------------#
+
+def getTimeStamp(sec):
+    mm, ss = divmod(sec, 60)
+    hh, mm= divmod(mm, 60)
+    return f"{(str(hh).rjust(2, '0'))}:{(str(mm).rjust(2, '0'))}:{(str(ss).rjust(2, '0'))}"
+
+
 #---------------Goal detection---------------#
+
 def Goal(x,y,save_dir,time,goalId):
     GoalId = goalId
     if GoalId == 1:
         if x in range(468,1450) and y in range(900,1075):
             with open(f'{save_dir}/goals.txt', 'a') as f:
-                f.write(f'Goal: {time}')
+                f.write(f'{getTimeStamp(time)}\n')
                 f.close()
             return True
         else:
@@ -246,7 +255,7 @@ def Goal(x,y,save_dir,time,goalId):
     elif GoalId == 2:
         if x in range(585,1400) and y in range(900,1075):
             with open(f'{save_dir}/goals.txt', 'a') as f:
-                f.write(f'Goal: {time}')
+                f.write(f'{getTimeStamp(time)}\n')
                 f.close()
             return True
         else:
