@@ -23,7 +23,7 @@ Usage - formats:
                                          yolov5s.tflite             # TensorFlow Lite
                                          yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
 """
-
+import math
 import argparse
 import os
 import sys
@@ -167,8 +167,8 @@ def run(
                     xCoord = round((c1[0]+c2[0])/2)
                     yCoord = round((c1[1]+c2[1])/2)
                     center_point = xCoord,yCoord
-                    #time_atm = cv2.putText(im0,f"Time: {str(round(time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen
-                    if Goal(xCoord,yCoord,save_dir,(round(time)),goal):
+                    #time_atm = cv2.putText(im0,f"Time: {str(math.trunc(time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen in seconds
+                    if Goal(xCoord,yCoord,save_dir,(math.trunc(time)),goal):
                         text_Goal = cv2.putText(im0,f"Goal {goal}",(1000,450),cv2.FONT_HERSHEY_PLAIN,4,(255, 0, 0),3)
                     #text_coord = cv2.putText(im0,str(center_point),center_point,cv2.FONT_HERSHEY_PLAIN,2,(0,255,255),2)     #---------------shows coords of ball
                 
