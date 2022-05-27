@@ -32,8 +32,9 @@ from time import time
 
 import torch
 import torch.backends.cudnn as cudnn
+from traitlets import default
 
-from datahandler import datahandler
+from datetime import datetime, timedelta
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -80,6 +81,8 @@ def run(
 
         #---------------Sets goalid via parser---------------#
         goal = 1, 
+        #---------------Sets goal-delay via parser---------------#
+        goal_delay = 10
 ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -147,7 +150,8 @@ def run(
                 p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
 
             #--------------Gets seconds frome frame--------------#
-            time = frame / 30
+            # print(vid_cap.get(cv2.CAP_PROP_FPS))
+            time = frame / vid_cap.get(cv2.CAP_PROP_FPS)
 
 
             p = Path(p)  # to Path
@@ -231,7 +235,7 @@ def run(
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
-        datahandler(save_dir, 10)
+        datahandler(save_dir, goal_delay)
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
@@ -272,6 +276,28 @@ def Goal(x,y,save_dir,time,goalId):
         raise Exception('Goal only accepts 1 and 2 ----- (if bottom half of the goal is cutt of choose 1 else choose 2)')
 
 
+#---------------convert timestamp goal detection---------------#
+def datahandler(path, delay):
+
+    previous = ''
+    new = []
+
+    with open(f'{path}\goals.txt', 'r') as file:
+        for line in file:
+            if previous=='':
+                new.append(line)
+                previous=line
+            if line!=previous and datetime.strptime(line, "%H:%M:%S ") > datetime.strptime(previous, "%H:%M:%S ") + timedelta(seconds=delay):
+                new.append(line)
+                previous = line
+        file.close()
+
+    with open(f'{path}\goals.txt', "w") as file:
+        for line in new:
+            file.write(line)
+        file.close()
+
+
 
 def parse_opt():
     parser = argparse.ArgumentParser()
@@ -304,6 +330,9 @@ def parse_opt():
 
     #Add Goal to arguments
     parser.add_argument('--goal', type=int, default=1, help='sets goal to detect, choose between 1 and 2')
+
+    #Add goal delay to arguments
+    parser.add_argument('--goal-delay', type=int, default=30, help='sets locked time after goal, during this time no goal is recognized')
 
 
     opt = parser.parse_args()
