@@ -35,6 +35,7 @@ import torch.backends.cudnn as cudnn
 from traitlets import default
 
 from datetime import datetime, timedelta
+from moviepy.editor import *
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -82,7 +83,11 @@ def run(
         #---------------Sets goalid via parser---------------#
         goal = 1, 
         #---------------Sets goal-delay via parser---------------#
-        goal_delay = 10
+        lock_goal = 10,
+        #---------------Sets time before and after clips via parser---------------#
+        pre_clip = 10,
+        post_clip = 10
+
 ):
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -235,7 +240,8 @@ def run(
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
-        datahandler(save_dir, goal_delay)
+        datahandler(save_dir, lock_goal)
+        makeClips(source, save_dir, pre_clip, post_clip)
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
 
@@ -278,7 +284,6 @@ def Goal(x,y,save_dir,time,goalId):
 
 #---------------convert timestamp goal detection---------------#
 def datahandler(path, delay):
-
     previous = ''
     new = []
 
@@ -296,6 +301,36 @@ def datahandler(path, delay):
         for line in new:
             file.write(line)
         file.close()
+
+
+#---------------make clips from goals---------------#
+def makeClips(source, path, preclip, postclip):
+    ### get timestamps from goals in form of totalseconds
+    previous = '00:00:00 '
+    totalSeconds = 0
+    timestamps = []
+
+    with open(f'{path}/goals.txt', 'r') as file:
+        for line in file:
+            diff = (datetime.strptime(line, "%H:%M:%S ") - datetime.strptime(previous, "%H:%M:%S ")).total_seconds()
+            totalSeconds += diff
+            timestamps.append(totalSeconds)
+            # print(diff)
+            # print(totalSeconds)
+            # print(line)
+            previous=line
+        file.close()
+
+    ### cut clips and paste toghether
+    full = VideoFileClip(source)
+    clips = []
+
+    for i in timestamps:
+        clips.append(full.subclip(i-preclip, i+postclip))
+
+    print('Making clips.....')
+    cut = concatenate_videoclips(clips)
+    cut.write_videofile(f'{path}/clips.mp4')
 
 
 
@@ -331,8 +366,12 @@ def parse_opt():
     #Add Goal to arguments
     parser.add_argument('--goal', type=int, default=1, help='sets goal to detect, choose between 1 and 2')
 
-    #Add goal delay to arguments
-    parser.add_argument('--goal-delay', type=int, default=30, help='sets locked time after goal, during this time no goal is recognized')
+    #Add goal lock to arguments
+    parser.add_argument('--lock-goal', type=int, default=30, help='sets locked time after goal, during this time no goal is recognized')
+
+    #Add time before and after goal clips
+    parser.add_argument('--pre-clip', type=int, default=10, help='sets time clips start before goal')
+    parser.add_argument('--post-clip', type=int, default=10, help='sets time clips end after goal')
 
 
     opt = parser.parse_args()
