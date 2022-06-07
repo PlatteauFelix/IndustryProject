@@ -8,8 +8,6 @@ import cv2
 from shapely.geometry import Point, Polygon
 
 
-path = r"C:\Users\viers\OneDrive\Bureaublad\MCT\sem4\IndustryProject\IndustryProject\TrainedModels"
-frame = keras.utils.load_img(r'C:\Users\viers\OneDrive\Bureaublad\MCT\sem4\IndustryProject\IndustryProject\Data\TestFrame.jpg', color_mode = "grayscale")
 
 class FindGoalCoords():
     def __init__(self,frame,path):
@@ -24,6 +22,7 @@ class FindGoalCoords():
     def loadImg(self):
         img = self.frame
         img = keras.utils.img_to_array(img)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         return img
 
     def proccesImg(self,img):
@@ -37,15 +36,26 @@ class FindGoalCoords():
         predictedImg = resize(predictedImg, (1080,1920,1), mode = 'constant', preserve_range = True)
         predictedImg = predictedImg - predictedImg.min() 
         predictedImg = predictedImg / predictedImg.max() * 255
-        predictedImg = np.uint8(predictedImg)
+        predictedImg = predictedImg.astype(np.uint8)
         return predictedImg
 
     def CreatePoly(self,img):
-        ret,img = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY)
+        ret,img = cv2.threshold(img, 150, 255, cv2.THRESH_BINARY)
         contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        contours = np.squeeze(contours)
-        poly = Polygon(contours)
-        return poly
+        if len(contours) > 1:
+            return ""
+        else:
+            contours = np.squeeze(contours)
+            poly = Polygon(contours)
+            return poly
+
+
+    def run(self):
+        model = self.loadModel()
+        img = self.loadImg()
+        img = self.proccesImg(img)
+        img = self.predict(img,model)
+        return self.CreatePoly(img)
 
     #----------------Test functions--------------------#
     def show(self,img):
@@ -62,14 +72,9 @@ class FindGoalCoords():
     #--------------------------------------------------#
 
 
-
-    def run(self):
-        model = self.loadModel()
-        img = self.loadImg()
-        img = self.proccesImg(img)
-        img = self.predict(img,model)
-        return self.CreatePoly(img)
+ 
 
 
 
-poly = FindGoalCoords(frame,path).poly
+
+
