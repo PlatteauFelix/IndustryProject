@@ -1,0 +1,13 @@
+# python -m venv venv
+# .\venv\Scripts\activate
+# pip install -r .\requirements.txt
+# pip install ipykernel
+# python -m ipykernel install --user --name venv
+# (optional) reload window
+# select venv as kernel
+
+opencv-python>=4.5.5.64
+tensorflow>=2.9.1
+moviepy>=1.0.3
+wandb>=0.12.17
+torch>=1.11.0+cu113
