@@ -1,5 +1,6 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 
+from hashlib import new
 import math
 import argparse
 import os
@@ -95,7 +96,7 @@ def run(
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
     
     #-----GoalDetectPath------# change for docker
-    pathGoalDetect = ROOT/'TrainedModels'
+    pathGoalDetect = '../'
 
     # Load model
     device = select_device(device)
@@ -121,8 +122,10 @@ def run(
     for path, im, im0s, vid_cap, s in dataset:
         if 'cam4' in path and source_cam4 is None:
             source_cam4 = path
+            poly=""
         if 'cam6' in path and source_cam6 is None:
             source_cam6 = path
+            poly=""
 
         # print(source_cam1)
         # print(source_cam4)
@@ -177,16 +180,17 @@ def run(
                 
                      #-----------sets coords/Visualizes goal-----------------#
             if poly == "":
-                if frame == 1 or frame % 80 == 0:
+                if frame == 1 or frame % 100 == 0:
                     poly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
-                    checkCount += 1
+                    checkCount = 0
 
 
             elif poly != "":
-                if checkCount < 3 and frame % 80 == 0:
+                if checkCount < 4 and frame % 100 == 0:
                     newPoly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
-                    checkCount += 1
-                    if newPoly.area > poly.area: poly = newPoly
+                    if newPoly!="": 
+                        checkCount += 1
+                        if newPoly.area > poly.area: poly = newPoly
 
 
                 int_coords = lambda x: np.array(x).round().astype(np.int32)
