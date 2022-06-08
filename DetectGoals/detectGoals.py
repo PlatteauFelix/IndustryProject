@@ -1,28 +1,5 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
-"""
-Run inference on images, videos, directories, streams, etc.
 
-Usage - sources:
-    $ python path/to/detect.py --weights yolov5s.pt --source 0              # webcam
-                                                             img.jpg        # image
-                                                             vid.mp4        # video
-                                                             path/          # directory
-                                                             path/*.jpg     # glob
-                                                             'https://youtu.be/Zgi9g1ksQHc'  # YouTube
-                                                             'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP stream
-
-Usage - formats:
-    $ python path/to/detect.py --weights yolov5s.pt                 # PyTorch
-                                         yolov5s.torchscript        # TorchScript
-                                         yolov5s.onnx               # ONNX Runtime or OpenCV DNN with --dnn
-                                         yolov5s.xml                # OpenVINO
-                                         yolov5s.engine             # TensorRT
-                                         yolov5s.mlmodel            # CoreML (macOS-only)
-                                         yolov5s_saved_model        # TensorFlow SavedModel
-                                         yolov5s.pb                 # TensorFlow GraphDef
-                                         yolov5s.tflite             # TensorFlow Lite
-                                         yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
-"""
 import math
 import argparse
 import os
@@ -53,6 +30,9 @@ from utils.general import (LOGGER, check_file, check_img_size, check_imshow, che
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, time_sync
 
+from shapely.geometry import Point, Polygon
+import numpy as np
+import DetectGoal
 
 @torch.no_grad()
 def run(
@@ -92,6 +72,8 @@ def run(
         source_cam1 = None
 
 ):
+
+    poly = ""
     start = perf_counter()
     source = str(source)
     source_cam1 = str(source_cam1)
@@ -104,9 +86,14 @@ def run(
     if is_url and is_file:
         source = check_file(source)  # download
 
+ 
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    
+    #-----GoalDetectPath------# change for docker
+    pathGoalDetect = r"C:\Users\viers\OneDrive\Bureaublad\MCT\sem4\IndustryProject\IndustryProject\TrainedModels"
+
 
     # Load model
     device = select_device(device)
@@ -122,7 +109,6 @@ def run(
         bs = len(dataset)  # batch_size
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt)
-
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
 
@@ -187,6 +173,18 @@ def run(
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
                 
+                     #-----------sets coords/Visualizes goal-----------------#
+                if poly == "":
+                    if frame == 1 or frame % 80 == 0:
+                        poly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
+
+                elif poly != "":
+                    int_coords = lambda x: np.array(x).round().astype(np.int32)
+                    exterior = [int_coords(poly.exterior.coords)]
+                    overlay = im0.copy()
+                    cv2.fillPoly(overlay, exterior, color=(255, 255, 0))
+                    cv2.addWeighted(overlay, 0.5, im0, 1 - 0.5, 0, im0)
+
 
 
                 #---------------Added Coords and goals---------------#
@@ -195,13 +193,11 @@ def run(
                     xCoord = round((c1[0]+c2[0])/2)
                     yCoord = round((c1[1]+c2[1])/2)
                     center_point = xCoord,yCoord
-                    #time_atm = cv2.putText(im0,f"Time: {str(math.trunc(time))}",(250,50),cv2.FONT_HERSHEY_PLAIN,3,(255, 0, 0),3)    #---------------sets time on screen in seconds
                     if Goal(xCoord,yCoord,save_dir,(math.trunc(time)),path):
                         if 'cam4' in path:
-                            text_Goal = cv2.putText(im0,f"Goal cam4",(1400,100),cv2.FONT_HERSHEY_PLAIN,5,(0, 0, 255),3)
+                            text_Goal = cv2.putText(im0,f"Goal cam4",(450,150),cv2.FONT_HERSHEY_PLAIN,10,(0, 50, 255),10)
                         if 'cam6' in path:
-                            text_Goal = cv2.putText(im0,f"Goal cam6",(1400,100),cv2.FONT_HERSHEY_PLAIN,5,(0, 0, 255),3)
-                    #text_coord = cv2.putText(im0,str(center_point),center_point,cv2.FONT_HERSHEY_PLAIN,2,(0,255,255),2)     #---------------shows coords of ball
+                            text_Goal = cv2.putText(im0,f"Goal cam6",(450,150),cv2.FONT_HERSHEY_PLAIN,10,(0, 50, 255),10)
                 
                 
 
@@ -293,25 +289,15 @@ def getTimeStamp(sec):
 
 #---------------Goal detection---------------#
 
-def Goal(x,y,save_dir,time, path):
-    if 'cam4' in path:
-        if x in range(468,1450) and y in range(900,1075):
-            with open(f'{save_dir}/goals_cam4.txt', 'a') as f:
+def Goal(x,y,save_dir,time,poly=""):
+    if poly != "":
+        bal = Point(x,y)
+        if bal.within(poly):
+            with open(f'{save_dir}/goals.txt', 'a') as f:
                 f.write(f'{getTimeStamp(time)}\n')
                 f.close()
             return True
-        else:
-            return False
-    elif 'cam6' in path:
-        if x in range(585,1400) and y in range(900,1075):
-            with open(f'{save_dir}/goals_cam6.txt', 'a') as f:
-                f.write(f'{getTimeStamp(time)}\n')
-                f.close()
-            return True
-        else:
-            return False
-    else:
-        raise Exception('Goal only accepts 1 and 2 ----- (if bottom half of the goal is cutt of choose 1 else choose 2)')
+
 
 
 #---------------convert timestamp goal detection---------------#
