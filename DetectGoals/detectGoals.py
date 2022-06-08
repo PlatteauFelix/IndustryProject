@@ -92,8 +92,7 @@ def run(
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
     
     #-----GoalDetectPath------# change for docker
-    pathGoalDetect = r"../"
-
+    pathGoalDetect = ROOT/'TrainedModels'
 
     # Load model
     device = select_device(device)
@@ -174,16 +173,16 @@ def run(
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
                 
                      #-----------sets coords/Visualizes goal-----------------#
-                if poly == "":
-                    if frame == 1 or frame % 80 == 0:
-                        poly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
+            if poly == "":
+                if frame == 1 or frame % 80 == 0:
+                    poly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
 
-                elif poly != "":
-                    int_coords = lambda x: np.array(x).round().astype(np.int32)
-                    exterior = [int_coords(poly.exterior.coords)]
-                    overlay = im0.copy()
-                    cv2.fillPoly(overlay, exterior, color=(255, 255, 0))
-                    cv2.addWeighted(overlay, 0.5, im0, 1 - 0.5, 0, im0)
+            elif poly != "":
+                int_coords = lambda x: np.array(x).round().astype(np.int32)
+                exterior = [int_coords(poly.exterior.coords)]
+                overlay = im0.copy()
+                cv2.fillPoly(overlay, exterior, color=(255, 255, 0))
+                cv2.addWeighted(overlay, 0.5, im0, 1 - 0.5, 0, im0)
 
 
 
