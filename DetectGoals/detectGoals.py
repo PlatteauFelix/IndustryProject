@@ -74,6 +74,9 @@ def run(
 ):
 
     poly = ""
+    checkCount = 0
+
+
     start = perf_counter()
     source = str(source)
     source_cam1 = str(source_cam1)
@@ -176,8 +179,16 @@ def run(
             if poly == "":
                 if frame == 1 or frame % 80 == 0:
                     poly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
+                    checkCount += 1
+
 
             elif poly != "":
+                if checkCount < 3 and frame % 80 == 0:
+                    newPoly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
+                    checkCount += 1
+                    if newPoly.area > poly.area: poly = newPoly
+
+
                 int_coords = lambda x: np.array(x).round().astype(np.int32)
                 exterior = [int_coords(poly.exterior.coords)]
                 overlay = im0.copy()
