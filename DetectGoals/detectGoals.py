@@ -92,7 +92,7 @@ def run(
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
     
     #-----GoalDetectPath------# change for docker
-    pathGoalDetect = r"C:\Users\viers\OneDrive\Bureaublad\MCT\sem4\IndustryProject\IndustryProject\TrainedModels"
+    pathGoalDetect = r"../"
 
 
     # Load model
@@ -193,7 +193,7 @@ def run(
                     xCoord = round((c1[0]+c2[0])/2)
                     yCoord = round((c1[1]+c2[1])/2)
                     center_point = xCoord,yCoord
-                    if Goal(xCoord,yCoord,save_dir,(math.trunc(time)),path):
+                    if Goal(xCoord,yCoord,save_dir,(math.trunc(time)),path,poly):
                         if 'cam4' in path:
                             text_Goal = cv2.putText(im0,f"Goal cam4",(450,150),cv2.FONT_HERSHEY_PLAIN,10,(0, 50, 255),10)
                         if 'cam6' in path:
@@ -289,15 +289,21 @@ def getTimeStamp(sec):
 
 #---------------Goal detection---------------#
 
-def Goal(x,y,save_dir,time,poly=""):
-    if poly != "":
+def Goal(x,y,save_dir,time,path,poly=""):
+    if 'cam4' in path and poly != "":
         bal = Point(x,y)
         if bal.within(poly):
-            with open(f'{save_dir}/goals.txt', 'a') as f:
+            with open(f'{save_dir}/goals_cam4.txt', 'a') as f:
                 f.write(f'{getTimeStamp(time)}\n')
                 f.close()
             return True
-
+    elif 'cam6' in path and poly != "":
+        bal = Point(x,y)
+        if bal.within(poly):
+            with open(f'{save_dir}/goals_cam6.txt', 'a') as f:
+                f.write(f'{getTimeStamp(time)}\n')
+                f.close()
+            return True
 
 
 #---------------convert timestamp goal detection---------------#
