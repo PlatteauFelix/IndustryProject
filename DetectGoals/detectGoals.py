@@ -63,24 +63,12 @@ def run(
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
         dnn=False,  # use OpenCV DNN for ONNX inference
-
-        #---------------Sets goal-delay via parser---------------#
-        lock_goal = 10,
-        #---------------Sets time before and after clips via parser---------------#
-        pre_clip = 10,
-        post_clip = 10,
-
-        source_cam1 = None
-
 ):
 
     poly = ""
     checkCount = 0
 
-
-    start = perf_counter()
     source = str(source)
-    source_cam1 = str(source_cam1)
     source_cam4 = None
     source_cam6 = None
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -96,7 +84,7 @@ def run(
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
     
     #-----GoalDetectPath------# change for docker
-    pathGoalDetect = '../'
+    pathGoalDetect = ''
 
     # Load model
     device = select_device(device)
@@ -127,7 +115,6 @@ def run(
             source_cam6 = path
             poly=""
 
-        # print(source_cam1)
         # print(source_cam4)
         # print(source_cam6)
 
@@ -186,7 +173,7 @@ def run(
 
 
             elif poly != "":
-                if checkCount < 4 and frame % 100 == 0:
+                if checkCount < 3 and frame % 100 == 0:
                     newPoly = DetectGoal.FindGoalCoords(im0,pathGoalDetect).poly
                     if newPoly!="": 
                         checkCount += 1
@@ -268,8 +255,6 @@ def run(
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-    datahandler(save_dir, lock_goal)
-    makeClips(source_cam1, source_cam4, source_cam6, save_dir, pre_clip, post_clip)
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
@@ -278,16 +263,6 @@ def run(
 
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
-    
-    end = perf_counter()
-    elapsedTimeSeconds = end-start
-    elapsedTimeSeconds = math.ceil(elapsedTimeSeconds)
-    elapsedTimeMinutes = elapsedTimeSeconds/60
-    elapsedTimeMinutes = math.floor(elapsedTimeMinutes)
-    elapsedDelta = elapsedTimeSeconds-elapsedTimeMinutes*60
-    elapsedDelta = math.ceil(elapsedDelta)
-    print(f'total elapsed time: {elapsedTimeSeconds}sec OR {elapsedTimeMinutes}min {elapsedDelta}sec')
-
 
 
 #---------------Create Timestamps---------------#
@@ -319,79 +294,6 @@ def Goal(x,y,save_dir,time,path,poly=""):
                 f.close()
             return True
 
-
-#---------------convert timestamp goal detection---------------#
-def datahandler(path, delay):
-    goals = {}
-
-    # remove duplicate timestamps and add goal lock of cam4
-    previous = '00:00:00'
-    with open(f'{path}/goals_cam4.txt', 'r') as file:
-        for timestamp in file:
-            timestamp = timestamp.strip()
-            if timestamp!=previous and datetime.strptime(timestamp, "%H:%M:%S") > datetime.strptime(previous, "%H:%M:%S") + timedelta(seconds=delay):
-                goals[timestamp] = 'cam4'
-                previous = timestamp
-        file.close()
-
-    # remove duplicate timestamps and add goal lock of cam6
-    previous = '00:00:00'
-    with open(f'{path}/goals_cam6.txt', 'r') as file:
-        for timestamp in file:
-            timestamp = timestamp.strip()
-            if timestamp!=previous and datetime.strptime(timestamp, "%H:%M:%S") > datetime.strptime(previous, "%H:%M:%S") + timedelta(seconds=delay):
-                goals[timestamp] = 'cam6'
-                previous = timestamp
-        file.close()
-
-    # sort timestamps
-    goals = OrderedDict(sorted(goals.items()))
-
-    # dump timestamps into json
-    with open(f'{path}/goals.json', "w") as file:
-        file.write(dumps(goals))
-        file.close()
-
-
-#---------------make clips from goals---------------#
-def makeClips(source_cam1, source_cam4, source_cam6, path, preclip, postclip):
-    ### get timestamps from goals in form of totalseconds
-    previous = '00:00:00'
-    totalSeconds = 0
-    timestamps = {}
-
-    with open(f'{path}/goals.json', 'r') as file:
-        data = load(file)
-        for timestamp, cam in data.items():
-            diff = (datetime.strptime(timestamp, "%H:%M:%S") - datetime.strptime(previous, "%H:%M:%S")).total_seconds()
-            totalSeconds += diff
-            timestamps[totalSeconds] = cam
-            # print(diff)
-            # print(totalSeconds)
-            # print(timestamp)
-            previous=timestamp
-        file.close()
-
-    ### cut clips and paste toghether
-    videoCam1 = VideoFileClip(source_cam1)
-    videoCam4 = VideoFileClip(source_cam4)
-    videoCam6 = VideoFileClip(source_cam6)
-    clips = []
-
-    for timestamp, cam in timestamps.items():
-        if cam == 'cam4':
-            clips.append(videoCam1.subclip(timestamp-preclip, timestamp+postclip))
-            clips.append(videoCam4.subclip(timestamp-preclip, timestamp+postclip))
-        elif cam == 'cam6':
-            clips.append(videoCam1.subclip(timestamp-preclip, timestamp+postclip))
-            clips.append(videoCam6.subclip(timestamp-preclip, timestamp+postclip))
-
-    print('Making clips.....')
-    cut = concatenate_videoclips(clips)
-    cut.write_videofile(f'{path}/clips.mp4')
-
-
-
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path(s)')
@@ -420,16 +322,6 @@ def parse_opt():
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
-
-    #Add goal lock to arguments
-    parser.add_argument('--lock-goal', type=int, default=30, help='sets locked time after goal, during this time no goal is recognized')
-
-    #Add time before and after goal clips
-    parser.add_argument('--pre-clip', type=int, default=10, help='sets time clips start before goal')
-    parser.add_argument('--post-clip', type=int, default=10, help='sets time clips end after goal')
-
-    parser.add_argument('--source-cam1', type=str, default=None, help='file location for cam1')
-
 
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
