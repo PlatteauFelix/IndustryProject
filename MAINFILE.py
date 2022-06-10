@@ -1,6 +1,116 @@
-import subprocess
+from subprocess import Popen
+from time import perf_counter
+import math
+from typing_extensions import Required
+from datetime import datetime, timedelta
+from collections import OrderedDict
+from json import dumps, load
+from moviepy.editor import *
 
-def MAINFILE(project=None, name=None, source=None, source_cam1=None, save=False, pre_clip=4, post_clip=4, lock_goal=15, model='best.pt', confidence=0.81):
+### VARIABLES ###
+# likely to change
+var_matchName = 'Match_X'
+var_projectName = 'RUNS'
+var_sourceCam1 = 'cam1.mp4'
+var_sourceCam4 = 'cam4.mp4'
+var_sourceCam6 = 'cam6.mp4'
+var_preClip = 4
+var_postClip = 4
+var_lockGoal = 15
+
+# unlikely to change
+var_saveDetects = True
+var_model = 'best.pt'
+var_confidence = 0.85
+
+
+
+
+
+
+#---------------Detect goal---------------#
+def detect(project, name, source_cam4, source_cam6, save, model, confidence):
+    commands = []
+    if save==False:
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam4} --nosave --exist-ok --device 0")
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam6} --nosave --exist-ok --device 0")
+    elif save==True:
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam4} --line-thickness 2 --exist-ok --device 0")
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam6} --line-thickness 2 --exist-ok --device 0")
+    # result = subprocess.run(commands, shell=True, stdout=subprocess.PIPE)
+    processes = [Popen(cmd, shell=True) for cmd in commands]
+    for p in processes: p.wait()
+
+#---------------convert timestamp goal detection---------------#
+def datahandler(path, lock_goal):
+    goals = {}
+
+    # remove duplicate timestamps and add goal lock of cam4
+    previous = '00:00:00'
+    with open(f'{path}/goals_cam4.txt', 'r') as file:
+        for timestamp in file:
+            timestamp = timestamp.strip()
+            if timestamp!=previous and datetime.strptime(timestamp, "%H:%M:%S") > datetime.strptime(previous, "%H:%M:%S") + timedelta(seconds=lock_goal):
+                goals[timestamp] = 'cam4'
+                previous = timestamp
+        file.close()
+
+    # remove duplicate timestamps and add goal lock of cam6
+    previous = '00:00:00'
+    with open(f'{path}/goals_cam6.txt', 'r') as file:
+        for timestamp in file:
+            timestamp = timestamp.strip()
+            if timestamp!=previous and datetime.strptime(timestamp, "%H:%M:%S") > datetime.strptime(previous, "%H:%M:%S") + timedelta(seconds=lock_goal):
+                goals[timestamp] = 'cam6'
+                previous = timestamp
+        file.close()
+
+    # sort timestamps
+    goals = OrderedDict(sorted(goals.items()))
+
+    # dump timestamps into json
+    with open(f'{path}/goals.json', "w") as file:
+        file.write(dumps(goals))
+        file.close()
+
+#---------------make clips from goals---------------#
+def makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip):
+    ### get timestamps from goals in form of totalseconds
+    previous = '00:00:00'
+    totalSeconds = 0
+    timestamps = {}
+
+    with open(f'{path}/goals.json', 'r') as file:
+        data = load(file)
+        for timestamp, cam in data.items():
+            diff = (datetime.strptime(timestamp, "%H:%M:%S") - datetime.strptime(previous, "%H:%M:%S")).total_seconds()
+            totalSeconds += diff
+            timestamps[totalSeconds] = cam
+            # print(diff)
+            # print(totalSeconds)
+            # print(timestamp)
+            previous=timestamp
+        file.close()
+
+    ### cut clips and paste toghether
+    videoCam1 = VideoFileClip(source_cam1)
+    videoCam4 = VideoFileClip(source_cam4)
+    videoCam6 = VideoFileClip(source_cam6)
+    clips = []
+
+    for timestamp, cam in timestamps.items():
+        if cam == 'cam4':
+            clips.append(videoCam1.subclip(timestamp-pre_clip, timestamp+post_clip))
+            clips.append(videoCam4.subclip(timestamp-pre_clip, timestamp+post_clip))
+        elif cam == 'cam6':
+            clips.append(videoCam1.subclip(timestamp-pre_clip, timestamp+post_clip))
+            clips.append(videoCam6.subclip(timestamp-pre_clip, timestamp+post_clip))
+
+    print('Making clips.....')
+    cut = concatenate_videoclips(clips)
+    cut.write_videofile(f'{path}/clips.mp4')
+
+def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, pre_clip, post_clip, lock_goal, save, model, confidence):
     #region validation
     message = ''
     if not isinstance(project, str) or project=='':
@@ -9,8 +119,11 @@ def MAINFILE(project=None, name=None, source=None, source_cam1=None, save=False,
     if not isinstance(name, str) or name=='':
         message += "ERROR: name is invalid\n"
 
-    if not isinstance(source, str) or source=='':
-        message += "ERROR: cam4 and cam6 source invalid\n"
+    if not isinstance(source_cam4, str) or source_cam4=='':
+        message += "ERROR: source cam4 invalid\n"
+
+    if not isinstance(source_cam6, str) or source_cam6=='':
+        message += "ERROR: source cam6 invalid\n"
 
     if not isinstance(source_cam1, str) or source_cam1=='':
         message += "ERROR: cam1 source invalid\n"
@@ -52,19 +165,30 @@ def MAINFILE(project=None, name=None, source=None, source_cam1=None, save=False,
             message += "ERROR: confidence cannot be more than 0.95\n"
     else:
         message += "ERROR: confidence has to be a number\n"
-    
     #endregion
 
     if message == '':
-        if save==False:
-            command = f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source} --source-cam1 {source_cam1} --lock-goal {lock_goal} --pre-clip {pre_clip} --post-clip {post_clip} --nosave --view-img"
-        elif save==True:
-            command = f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source} --source-cam1 {source_cam1} --lock-goal {lock_goal} --pre-clip {pre_clip} --post-clip {post_clip} --line-thickness 2"
-        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
+        # detect(project, name, source_cam4, source_cam6, save, model, confidence)
+        path = f'{project}/{name}'
+        datahandler(path, lock_goal)
+        makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip)
     else:
         print(message)
 
 
 
+
 # call function
-MAINFILE(project='RUNS', name='Match_X', source = 'cam[4,6]*.mp4', source_cam1='cam1.mp4', save=False)
+start = perf_counter()
+
+MAINFILE(var_projectName, var_matchName, var_sourceCam1, var_sourceCam4, var_sourceCam6, var_preClip, var_postClip, var_lockGoal, var_saveDetects, var_model, var_confidence)
+
+end = perf_counter()
+elapsedTimeSeconds = end-start
+elapsedTimeSeconds = math.ceil(elapsedTimeSeconds)
+elapsedTimeMinutes = elapsedTimeSeconds/60
+elapsedTimeMinutes = math.floor(elapsedTimeMinutes)
+elapsedDelta = elapsedTimeSeconds-elapsedTimeMinutes*60
+elapsedDelta = math.ceil(elapsedDelta)
+print(f'total elapsed time: {elapsedTimeSeconds}sec OR {elapsedTimeMinutes}min {elapsedDelta}sec')
+print(f'total elapsed time: {elapsedTimeSeconds}sec OR {elapsedTimeMinutes}min {elapsedDelta}sec')
