@@ -57,7 +57,7 @@ def MAINFILE(project=None, name=None, source=None, source_cam1=None, save=False,
 
     if message == '':
         if save==False:
-            command = f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source} --source-cam1 {source_cam1} --lock-goal {lock_goal} --pre-clip {pre_clip} --post-clip {post_clip} --nosave"
+            command = f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source} --source-cam1 {source_cam1} --lock-goal {lock_goal} --pre-clip {pre_clip} --post-clip {post_clip} --nosave --view-img"
         elif save==True:
             command = f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source} --source-cam1 {source_cam1} --lock-goal {lock_goal} --pre-clip {pre_clip} --post-clip {post_clip} --line-thickness 2"
         result = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
@@ -67,4 +67,4 @@ def MAINFILE(project=None, name=None, source=None, source_cam1=None, save=False,
 
 
 # call function
-MAINFILE(project='RUNS', name='Match_X', source = 'cam[4,6]*.mp4', source_cam1='cam1.mp4', save=True)
+MAINFILE(project='RUNS', name='Match_X', source = 'cam[4,6]*.mp4', source_cam1='cam1.mp4', save=False)
