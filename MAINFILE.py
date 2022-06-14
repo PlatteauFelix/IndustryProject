@@ -6,22 +6,25 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 from json import dumps, load
 from moviepy.editor import *
+import torch
 
 ### VARIABLES ###
 # likely to change
-var_matchName = 'Match_X'
-var_projectName = 'RUNS'
-var_sourceCam1 = 'cam1.mp4'
-var_sourceCam4 = 'cam4.mp4'
-var_sourceCam6 = 'cam6.mp4'
-var_preClip = 4
-var_postClip = 4
-var_lockGoal = 15
+var_matchName = 'TEST'              # name of match where everything gets saved in folder {var_projectName}/{var_matchName}
+var_preClip = 4                     # seconds before goal in clip
+var_postClip = 4                    # seconds after goal in clip
+var_lockGoal = 15                   # seconds after goal when no new goal can be detected
 
 # unlikely to change
-var_saveDetects = True
-var_model = 'best.pt'
-var_confidence = 0.85
+var_projectName = 'RUNS'            # main folder where all matches will be saved
+var_videoSourceCam1 = 'cam1.mp4'    # where cam1 is saved after livestream
+var_videoSourceCam4 = 'cam4.mp4'    # where cam4 is saved after livestream
+var_videoSourceCam6 = 'cam6.mp4'    # where cam5 is saved after livestream
+var_livestreamCam4 = 'cam4.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
+var_livestreamCam6 = 'cam6.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
+var_saveDetects = True              # True = save detection video's, False = only save clips and timestamps goals
+var_model = 'best.pt'               # location of our trained yolov5 model
+var_confidence = 0.85               # minimum threshold of confidence
 
 
 
@@ -29,15 +32,25 @@ var_confidence = 0.85
 
 
 #---------------Detect goal---------------#
-def detect(project, name, source_cam4, source_cam6, save, model, confidence):
+def detect(project, name, livestream_cam4, livestream_cam6, save, model, confidence):
+    #check how many gpu's are present, else use cpu
+    device1 = 0
+    device2 = 0
+    if torch.cuda.device_count() == 1:
+        device1, device2 = 0, 0
+    elif torch.cuda.device_count() == 2:
+        device1, device2 = 0, 1
+    else:
+        device1, device2 = 'cpu', 'cpu'
+
+
     commands = []
     if save==False:
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam4} --nosave --exist-ok --device 0")
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam6} --nosave --exist-ok --device 0")
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --nosave --exist-ok --device {device1}")
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --nosave --exist-ok --device {device2}")
     elif save==True:
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam4} --line-thickness 2 --exist-ok --device 0")
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {source_cam6} --line-thickness 2 --exist-ok --device 0")
-    # result = subprocess.run(commands, shell=True, stdout=subprocess.PIPE)
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --line-thickness 2 --exist-ok --device {device1}")
+        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --line-thickness 2 --exist-ok --device {device2}")
     processes = [Popen(cmd, shell=True) for cmd in commands]
     for p in processes: p.wait()
 
@@ -110,7 +123,7 @@ def makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip):
     cut = concatenate_videoclips(clips)
     cut.write_videofile(f'{path}/clips.mp4')
 
-def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, pre_clip, post_clip, lock_goal, save, model, confidence):
+def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, livestream_cam4, livestream_cam6, pre_clip, post_clip, lock_goal, save, model, confidence):
     #region validation
     message = ''
     if not isinstance(project, str) or project=='':
@@ -118,15 +131,21 @@ def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, pre_clip, pos
 
     if not isinstance(name, str) or name=='':
         message += "ERROR: name is invalid\n"
+    
+    if not isinstance(source_cam1, str) or source_cam1=='':
+        message += "ERROR: source video cam1 invalid\n"
 
     if not isinstance(source_cam4, str) or source_cam4=='':
-        message += "ERROR: source cam4 invalid\n"
+        message += "ERROR: source video cam4 invalid\n"
 
     if not isinstance(source_cam6, str) or source_cam6=='':
-        message += "ERROR: source cam6 invalid\n"
+        message += "ERROR: source video cam6 invalid\n"
 
-    if not isinstance(source_cam1, str) or source_cam1=='':
-        message += "ERROR: cam1 source invalid\n"
+    if not isinstance(livestream_cam4, str) or livestream_cam4=='':
+        message += "ERROR: livestream link cam4 invalid\n"
+
+    if not isinstance(livestream_cam6, str) or livestream_cam6=='':
+        message += "ERROR: livestream link cam6 invalid\n"
 
     if not isinstance(save, bool):
         message += "ERROR: set `True` to save detect videos\n"
@@ -168,10 +187,10 @@ def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, pre_clip, pos
     #endregion
 
     if message == '':
-        # detect(project, name, source_cam4, source_cam6, save, model, confidence)
-        path = f'{project}/{name}'
-        datahandler(path, lock_goal)
-        makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip)
+        detect(project, name, livestream_cam4, livestream_cam6, save, model, confidence)
+        # path = f'{project}/{name}'
+        # datahandler(path, lock_goal)
+        # makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip)
     else:
         print(message)
 
@@ -181,7 +200,7 @@ def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, pre_clip, pos
 # call function
 start = perf_counter()
 
-MAINFILE(var_projectName, var_matchName, var_sourceCam1, var_sourceCam4, var_sourceCam6, var_preClip, var_postClip, var_lockGoal, var_saveDetects, var_model, var_confidence)
+MAINFILE(var_projectName, var_matchName, var_videoSourceCam1, var_videoSourceCam4, var_videoSourceCam6, var_livestreamCam4, var_livestreamCam6, var_preClip, var_postClip, var_lockGoal, var_saveDetects, var_model, var_confidence)
 
 end = perf_counter()
 elapsedTimeSeconds = end-start
@@ -190,5 +209,4 @@ elapsedTimeMinutes = elapsedTimeSeconds/60
 elapsedTimeMinutes = math.floor(elapsedTimeMinutes)
 elapsedDelta = elapsedTimeSeconds-elapsedTimeMinutes*60
 elapsedDelta = math.ceil(elapsedDelta)
-print(f'total elapsed time: {elapsedTimeSeconds}sec OR {elapsedTimeMinutes}min {elapsedDelta}sec')
 print(f'total elapsed time: {elapsedTimeSeconds}sec OR {elapsedTimeMinutes}min {elapsedDelta}sec')
