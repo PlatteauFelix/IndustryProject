@@ -61,7 +61,7 @@ this starts an additional check that runs 3 times to use the biggest found polyg
 
 ---
 
-![Image of Detection](img\AiShowcase.jpg?raw=true "AiShowcase")
+![Image of Detection](https://github.com/PlatteauFelix/IndustryProject/blob/main/img/AiShowcase.jpg?raw=true "AiShowcase")
 
 ---
 # 4. Run model
