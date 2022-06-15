@@ -7,4 +7,4 @@
 /Yolov5_DeepSort_Pytorch
 /RUNS
 /testing
-
+*/__pycache__
