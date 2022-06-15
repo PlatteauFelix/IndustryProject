@@ -17,11 +17,11 @@ var_lockGoal = 15                   # seconds after goal when no new goal can be
 
 # unlikely to change
 var_projectName = 'RUNS'            # main folder where all matches will be saved
-var_videoSourceCam1 = 'cam1.mp4'    # where cam1 is saved after livestream
-var_videoSourceCam4 = 'cam4.mp4'    # where cam4 is saved after livestream
-var_videoSourceCam6 = 'cam6.mp4'    # where cam5 is saved after livestream
-var_livestreamCam4 = 'cam4.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
-var_livestreamCam6 = 'cam6.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
+var_videoSourceCam1 = 'data/Videos/cam1.mp4'    # where cam1 is saved after livestream
+var_videoSourceCam4 = 'data/Videos/cam4.mp4'    # where cam4 is saved after livestream
+var_videoSourceCam6 = 'data/Videos/cam6.mp4'    # where cam5 is saved after livestream
+var_livestreamCam4 = 'data/Videos/cam4.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
+var_livestreamCam6 = 'data/Videos/cam6.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
 var_saveDetects = True              # True = save detection video's, False = only save clips and timestamps goals
 var_model = 'yolov5/TrainedModels/BestYolo.pt'               # location of our trained yolov5 model
 var_confidence = 0.85               # minimum threshold of confidence
@@ -188,9 +188,9 @@ def MAINFILE(project, name, source_cam1, source_cam4, source_cam6, livestream_ca
 
     if message == '':
         detect(project, name, livestream_cam4, livestream_cam6, save, model, confidence)
-        # path = f'{project}/{name}'
-        # datahandler(path, lock_goal)
-        # makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip)
+        path = f'{project}/{name}'
+        datahandler(path, lock_goal)
+        makeClips(source_cam1, source_cam4, source_cam6, path, pre_clip, post_clip)
     else:
         print(message)
 
