@@ -61,6 +61,9 @@ this starts an additional check that runs 3 times to use the biggest found polyg
 
 ---
 
+![Alt text](img\AiShowcase.jpg?raw=true"AiShowcase")
+
+---
 # 4. Run model
 to run the model u need video or livestream from the 2 cams above the goal and the camera following the game.
 then u can just run the MAINFILE.py and that should do the trick.
