@@ -11,3 +11,11 @@ tensorflow>=2.9.1
 moviepy>=1.0.3
 wandb>=0.12.17
 torch>=1.11.0+cu113
+traitlets
+pandas
+torchvision
+matplotlib
+seaborn
+shapely
+scikit-image
+requests>=2.23.0

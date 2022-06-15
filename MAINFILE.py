@@ -23,7 +23,7 @@ var_videoSourceCam6 = 'cam6.mp4'    # where cam5 is saved after livestream
 var_livestreamCam4 = 'cam4.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
 var_livestreamCam6 = 'cam6.mp4'     # RTSP, RTMP, HTTP stream link of cam 4
 var_saveDetects = True              # True = save detection video's, False = only save clips and timestamps goals
-var_model = 'best.pt'               # location of our trained yolov5 model
+var_model = 'yolov5/TrainedModels/BestYolo.pt'               # location of our trained yolov5 model
 var_confidence = 0.85               # minimum threshold of confidence
 
 
