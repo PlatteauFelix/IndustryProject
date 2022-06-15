@@ -46,11 +46,11 @@ def detect(project, name, livestream_cam4, livestream_cam6, save, model, confide
 
     commands = []
     if save==False:
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --nosave --exist-ok --device {device1}")
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --nosave --exist-ok --device {device2}")
+        commands.append(f"python yolov5/DetectYolo.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --nosave --exist-ok --device {device1}")
+        commands.append(f"python yolov5/DetectYolo.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --nosave --exist-ok --device {device2}")
     elif save==True:
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --line-thickness 2 --exist-ok --device {device1}")
-        commands.append(f"python yolov5/detectGoals.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --line-thickness 2 --exist-ok --device {device2}")
+        commands.append(f"python yolov5/DetectYolo.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam4} --line-thickness 2 --exist-ok --device {device1}")
+        commands.append(f"python yolov5/DetectYolo.py --project {project} --name {name} --max 1 --conf {confidence} --weights {model} --img 1080 --source {livestream_cam6} --line-thickness 2 --exist-ok --device {device2}")
     processes = [Popen(cmd, shell=True) for cmd in commands]
     for p in processes: p.wait()
 
