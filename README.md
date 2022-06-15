@@ -16,7 +16,7 @@ Industry project for Howest MCT AI in co-operation with DLC
 
 ## 1.2 Convert video(s) to frames
 See ConvertToFrames folder, 
-we each had a notebook to quickly convert videos and test.
+We each had a notebook to quickly convert videos and test.
 
 ## 1.3 Label images
 - we used Vott to label ball for yolov5 and goal for unet.
@@ -30,13 +30,13 @@ we each had a notebook to quickly convert videos and test.
 
 ## 2.1 Training Yolov5
 
-In Training folder there are 2 notebooks for yolov5 training
-Chose between local training or google colab and choose corresponding "training" notebook
+In Training folder there are 2 notebooks for yolov5 training.
+Chose between local training or google colab and choose corresponding "training" notebook.
 
 ## 2.2 Training Unet
 
 There are 2 notebooks in the SegementationUnet folder.
-the CreateMasksCoco notebook uses the coco segmentation format from roboflow to create the required images and corresponding masks needed to train Unet.
+The CreateMasksCoco notebook uses the coco segmentation format from roboflow to create the required images and corresponding masks needed to train Unet.
 
 The Unet notebook is used to train a unet model locally.
 
@@ -45,19 +45,19 @@ The Unet notebook is used to train a unet model locally.
 # 3. Detection
 
 ## 3.1 Goal Detection
-yolov5 is a object detector we use to find the ball.
-the Ball detection happens in the DetectYolo.py in the yolov5 folder.
-we used yolov5's detect.py as a base to build our project.
-the final clips are also made in this file.
+Yolov5 is a object detector we use to find the ball.
+The Ball detection happens in the DetectYolo.py in the yolov5 folder.
+We used yolov5's detect.py as a base to build our project.
+The final clips are also made in this file.
 
 
 ## 3.2 Goal Detection
 
 To detect the goal we used Unet.
-this gets called in the DetectYolo file but happens in DetectUnet.
+This gets called in the DetectYolo file but happens in DetectUnet.
 A polygon is created from this goal detection wich is used to see if a ball is in the goal contours. 
-there is a check that reruns the unet detect every 100 frames until a goal is found.
-this starts an additional check that runs 3 times to use the biggest found polygon to prevent gaps in the goal contours.
+There is a check that reruns the unet detect every 100 frames until a goal is found.
+This starts an additional check that runs 3 times to use the biggest found polygon to prevent gaps in the goal contours.
 
 ---
 
@@ -65,7 +65,10 @@ this starts an additional check that runs 3 times to use the biggest found polyg
 
 ---
 # 4. Run model
-to run the model u need video or livestream from the 2 cams above the goal and the camera following the game.
+To run the model u need video or livestream from the 2 cams above the goal and the camera following the game.
 then u can just run the MAINFILE.py and that should do the trick.
 
 ---
+
+# 5. output
+When detection is ready the output will always be a json with timestamps and the corresponding camera and a summary of clips. Optionaly the detection video's can be saved.
